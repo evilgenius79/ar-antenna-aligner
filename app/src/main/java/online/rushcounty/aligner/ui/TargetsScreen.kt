@@ -6,6 +6,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import online.rushcounty.aligner.data.Category
 import online.rushcounty.aligner.data.Target
 import online.rushcounty.aligner.data.TargetType
 import online.rushcounty.aligner.geo.CoordParser
@@ -114,6 +116,23 @@ fun TargetsScreen(vm: AppViewModel) {
             label = { Text("Search name, frequency or call sign (${sorted.size})") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
         )
+        val counts = remember(targets) { Category.counts(targets) }
+        if (counts.size > 1) {
+            // Tap a category to hide or show all of its markers in the camera view.
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val anyHidden = counts.any { it.first.code in settings.hiddenCats }
+                TextButton(onClick = { vm.setCategoriesShown(counts.map { it.first }, anyHidden) }) {
+                    Text(if (anyHidden) "Show all" else "Hide all")
+                }
+                counts.forEach { (c, n) ->
+                    val on = c.code !in settings.hiddenCats
+                    FilterChip(
+                        selected = on, onClick = { vm.setCategoryShown(c, !on) },
+                        label = { Text("${c.label} $n", fontSize = 12.sp) },
+                    )
+                }
+            }
+        }
         HorizontalDivider()
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(sorted, key = { it.id }) { t ->
@@ -122,6 +141,7 @@ fun TargetsScreen(vm: AppViewModel) {
                     fix = fix,
                     imperial = settings.imperial,
                     selected = t.id == settings.selectedTargetId,
+                    categoryOff = !Category.shown(t, settings.hiddenCats),
                     onAim = { vm.select(t.id); vm.show(Screen.AR) },
                     onEdit = { editing = t },
                     onToggle = { vm.toggleVisible(t.id) },
@@ -188,7 +208,7 @@ fun TargetsScreen(vm: AppViewModel) {
 
 @Composable
 private fun TargetRow(
-    t: Target, fix: Fix?, imperial: Boolean, selected: Boolean,
+    t: Target, fix: Fix?, imperial: Boolean, selected: Boolean, categoryOff: Boolean,
     onAim: () -> Unit, onEdit: () -> Unit, onToggle: () -> Unit, onDelete: () -> Unit,
 ) {
     Card(
@@ -199,10 +219,13 @@ private fun TargetRow(
         Column(Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    t.name + if (!t.visible) "  (hidden)" else "",
+                    t.name + if (!t.visible) "  (hidden)" else if (categoryOff) "  (category off)" else "",
                     fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
                 )
-                Text(t.type.label, fontSize = 12.sp)
+                Text(
+                    if (t.cats.isEmpty()) t.type.label else Category.of(t).take(2).joinToString(" · ") { it.label },
+                    fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp),
+                )
             }
             if (fix != null) {
                 val obs = GeoPoint(fix.lat, fix.lon, fix.altMeters)

@@ -55,6 +55,7 @@ object SiteTiles {
                     altMeters = if (s.isNull(4)) null else s.getDouble(4),
                     type = TargetType.parse(s.getString(5)),
                     note = s.optString(7).ifBlank { null },
+                    cats = if (s.length() > 8) s.getString(8) else Category.fromTags(s.getString(6)),
                 ),
                 tags = s.getString(6),
             )

@@ -18,6 +18,9 @@ No account, no ads, no API keys. Works offline once your targets are loaded.
 - **Antennas near any US ZIP code.** Type a ZIP, pick 10 / 25 / 50 / 75 / 100 miles, and the app
   fills in every antenna site the FCC has on file in that circle: about 490,000 sites nationwide,
   each with its users, frequencies, call signs and height.
+- **Categories.** Every site is sorted into police/fire/EMS, government, railroad, utilities,
+  schools, hospitals, farm, cell and towers, broadcast, paging, microwave or other business.
+  Hide or show a whole group with one tap.
 - **Live AR view.** Markers stay glued to the real tower as you pan. Off-screen targets you have
   selected get an arrow at the screen edge.
 - **Aiming guidance.** Select a target and the panel reads "Turn right 12.3° · Tilt up 0.4°". The
@@ -81,6 +84,19 @@ Typical counts with everything except microwave ticked:
 A single add is capped at the nearest 10,000 sites. With a long list, **Settings → Show towers
 within** limits how far out markers are drawn, and the Targets list has a search box that matches
 names, frequencies and call signs.
+
+### Hiding and showing categories
+
+Tap **Filter** in the camera view, or use the row of category buttons at the top of Targets. Each
+shows how many sites it holds. A site used by several groups (a county tower that also carries a
+cell carrier) stays on while any of its categories is on, and the target you are aiming at always
+shows. Targets you typed in yourself are under **My own**.
+
+The FCC only separates public safety from everything else. The finer groups are worked out from
+the licensee's name and, for railroads, from the band reserved for them (160.215–161.565 MHz).
+Railroads, schools, hospitals and utilities sort well. A business with a name that gives nothing
+away lands in **Other business**, and a county licence is filed under police/fire/EMS even when
+the radio on it belongs to the highway department.
 
 ### What the data is, and what it is not
 
@@ -171,6 +187,7 @@ from fresh FCC files, see [`tools/README.md`](tools/README.md).
 | Satellite positions: Kepler + J2 secular drift, sidereal time, look angles | `sat/OrbitMath.kt` |
 | Sun and Moon: Astronomical Almanac low-precision formulas, refraction | `sat/Astro.kt` |
 | ZIP lookup, tile download and filtering | `data/AreaRepository.kt` |
+| Site categories and the show/hide rule | `data/Category.kt` |
 | Overlay drawing and label decluttering | `ui/ArOverlay.kt` |
 
 All paths are under `app/src/main/java/online/rushcounty/aligner/`.

@@ -36,13 +36,19 @@ Builds the per-degree tiles on the `data` branch and the list bundled in the APK
 
 ```json
 {"v": 1, "built": "2026-11",
- "fields": ["id", "name", "lat", "lon", "altMeters", "type", "tags", "note"],
- "sites": [["fcc:1028174", "Indiana SAFE-T (IPSC) tower", 39.620083, -85.406889, 396.8, "REPEATER", "PT", "..."]]}
+ "fields": ["id", "name", "lat", "lon", "altMeters", "type", "tags", "note", "cats"],
+ "sites": [["fcc:1028174", "Indiana SAFE-T (IPSC) tower", 39.620083, -85.406889, 396.8, "REPEATER", "PT", "...", "PC"]]}
 ```
 
 - `id` is stable between builds: the tower registration number, or call sign plus location number.
 - `altMeters` is ground elevation plus structure or antenna height, above mean sea level. May be null.
 - `tags`: `T` registered tower, `P` public safety, `B` other land mobile, `M` microwave only.
+  These drive the tick boxes when adding an area.
+- `cats`: who uses the site, for hiding and showing groups in the app. `P` police/fire/EMS,
+  `G` government, `R` railroad, `U` utilities, `S` schools, `H` hospitals, `F` farm,
+  `C` cell carriers and registered towers, `B` broadcast, `N` paging, `M` microwave links,
+  `O` other business. See `rec_cats()` for the rules.
+- New fields are only ever added at the end; the app reads by position, so older versions keep working.
 
 ### How sites are built
 

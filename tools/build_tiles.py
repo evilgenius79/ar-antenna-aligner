@@ -275,6 +275,80 @@ def _who(n):
     return ' '.join(words) or '?'
 
 
+# ---------------------------------------------------------------- categories
+# One letter per category; the app shows or hides markers by these. The FCC only separates public
+# safety from everything else, so the finer groups come from the licensee's name and, for
+# railroads, from the band (160.215-161.565 MHz is reserved for them).
+
+CAT_ORDER = 'PGRUSHFCBNMO'
+RX_PS = re.compile(r'FIRE|POLICE|SHERIFF|\bEMS\b|AMBULANCE|RESCUE|EMERGENCY|\b911\b|LAW ENFORCEMENT|PUBLIC SAFETY', re.I)
+RX_RAIL = re.compile(
+    r'RAILROAD|RAILWAY|RAIL ROAD|\bRAIL\b|\bRR\b|\bCSX|NORFOLK SOUTHERN|UNION PACIFIC|\bBNSF\b|AMTRAK|CONRAIL|'
+    r'KANSAS CITY SOUTHERN|CANADIAN NATIONAL|CANADIAN PACIFIC|\bCPKC\b|GRAND TRUNK|ILLINOIS CENTRAL|SOO LINE|'
+    r'WISCONSIN CENTRAL|PTC-220', re.I)
+RX_SCHOOL = re.compile(r'SCHOOL|\bMSD\b|UNIVERSITY|COLLEGE|ACADEMY|EDUCATION|\bISD\b|\bUSD\b', re.I)
+RX_HOSP = re.compile(r'HOSPITAL|MEDICAL|HEALTH|CLINIC|NURSING', re.I)
+RX_UTIL = re.compile(
+    r'ELECTRIC|\bPOWER\b|ENERGY|\bREMC\b|\bEMC\b|\bGAS\b|\bWATER|UTILIT|PIPELINE|PIPE LINE|SEWER|EDISON|'
+    r'\bLIGHT\b|SANITARY|IRRIGATION', re.I)
+RX_FARM = re.compile(
+    r'\bFARM|GRAIN|\bAG\b|AGRI|CO-OP|COOPERATIVE|\bCOOP\b|\bSEED|DAIRY|RANCH|HARVEST|FERTILIZER|\bFEED\b|ORCHARD|CATTLE', re.I)
+# Only applied to licences in the public-safety pool, where the holder is already a government body.
+RX_GOVSVC = re.compile(
+    r'HIGHWAY|STREET|PUBLIC WORKS|\bROAD|TRANSPORTATION|\bDOT\b|\bPARK|SANITATION|TRANSIT|AIRPORT|SOLID WASTE|'
+    r'DRAINAGE|CONSERVATION|FOREST|NATURAL RESOURCES|HOUSING|LIBRARY|ANIMAL', re.I)
+RX_GOV = re.compile(
+    r', (COUNTY|CITY|TOWN|TOWNSHIP|VILLAGE|STATE|BOROUGH|PARISH) OF\b|^(COUNTY|CITY|TOWN|TOWNSHIP|VILLAGE|STATE) OF\b|'
+    r'MUNICIPAL|DEPARTMENT OF|DEPT OF|PUBLIC TRANSIT|\bAUTHORITY\b|COMMISSION', re.I)
+TOWER_COS = {'SBA', 'American Tower', 'Crown Castle', 'Vertical Bridge'}
+RAIL_BAND = (160.215, 161.565)
+
+
+def name_cat(n, default):
+    """Category a licensee name points to, or [default] when it says nothing."""
+    for rx, c in ((RX_PS, 'P'), (RX_RAIL, 'R'), (RX_SCHOOL, 'S'), (RX_HOSP, 'H'), (RX_UTIL, 'U'), (RX_FARM, 'F')):
+        if rx.search(n):
+            return c
+    if RX_GOV.search(n):
+        return 'G'
+    return default
+
+
+def rec_cats(r):
+    n = r['who']
+    w = who(n)
+    cell = w in CARRIERS or w in TOWER_COS
+    if r['src'] == 'asr':
+        extra = None if cell else name_cat(n, None)
+        return {'C'} | ({extra} if extra else set())
+    if r['src'] == 'LMbcast':
+        return {'B'}
+    if r['src'] == 'paging':
+        return {'N'}
+    if r['src'] == 'micro':
+        return {'C'} if cell else {name_cat(n, 'M')}
+    if r['svc'] in PUBLIC_SAFETY:
+        # Counties and cities usually hold police and fire on a licence in their own name.
+        for rx, c in ((RX_PS, 'P'), (RX_RAIL, 'R'), (RX_SCHOOL, 'S'), (RX_HOSP, 'H'), (RX_UTIL, 'U'), (RX_GOVSVC, 'G')):
+            if rx.search(n):
+                return {c}
+        return {'P'}
+    if cell:
+        return {'C'}
+    if any(RAIL_BAND[0] <= f <= RAIL_BAND[1] for f in r['freqs']) and not RX_PS.search(n):
+        return {'R'}
+    return {name_cat(n, 'O')}
+
+
+def site_cats(recs):
+    cs = set()
+    for r in recs:
+        cs |= rec_cats(r)
+    if len(cs) > 1:
+        cs.discard('M')  # a microwave dish on a site that is known for something else
+    return ''.join(c for c in CAT_ORDER if c in cs)
+
+
 PRI = collections.defaultdict(lambda: 3)
 PRI.update({s: 0 for s in PUBLIC_SAFETY})
 PRI.update({'GO': 1, 'IG': 1, 'YG': 1, 'YO': 1, 'GB': 1, 'YB': 1, 'CD': 2, 'GS': 2, 'ASR': 5})
@@ -353,7 +427,8 @@ def describe(s, build):
     return dict(
         id='fcc:' + key, name=name, lat=round(s['pos'][0], 6), lon=round(s['pos'][1], 6),
         alt=round(ground + (h or 0), 1) if ground is not None else None,
-        type='REPEATER' if any(r['rep'] for r in recs) else 'TOWER', tags=tags, note=' '.join(parts))
+        type='REPEATER' if any(r['rep'] for r in recs) else 'TOWER', tags=tags, cats=site_cats(recs),
+        note=' '.join(parts))
 
 
 # ---------------------------------------------------------------- write
@@ -370,8 +445,11 @@ def write_tiles(entries, out_dir, build):
     total = 0
     for (la, lo), es in sorted(tiles.items()):
         es.sort(key=lambda e: e['id'])
-        body = {'v': 1, 'built': build, 'fields': ['id', 'name', 'lat', 'lon', 'altMeters', 'type', 'tags', 'note'],
-                'sites': [[e['id'], e['name'], e['lat'], e['lon'], e['alt'], e['type'], e['tags'], e['note']] for e in es]}
+        # New fields go on the end: older app versions read by position and ignore the rest.
+        body = {'v': 1, 'built': build,
+                'fields': ['id', 'name', 'lat', 'lon', 'altMeters', 'type', 'tags', 'note', 'cats'],
+                'sites': [[e['id'], e['name'], e['lat'], e['lon'], e['alt'], e['type'], e['tags'], e['note'], e['cats']]
+                          for e in es]}
         raw = json.dumps(body, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
         name = f'{la}_{lo}.json.gz'
         with open(os.path.join(tdir, name), 'wb') as f:
@@ -397,7 +475,7 @@ def write_seed(entries, path):
     for p in SEED_OSM:
         if min(dist(p, (t['lat'], t['lon'])) for t in out) > 150:
             out.append(dict(id=f'osm:{p[0]},{p[1]}', name='Tower (not in FCC data)', lat=p[0], lon=p[1], alt=None,
-                            type='TOWER', tags='T',
+                            type='TOWER', tags='T', cats='C',
                             note='Mapped in OpenStreetMap; no FCC record found, height unknown. (c) OpenStreetMap contributors'))
     cnt = collections.Counter(t['name'] for t in out)
     seen = collections.Counter()
@@ -406,13 +484,14 @@ def write_seed(entries, path):
             seen[t['name']] += 1
             t['name'] += f" #{seen[t['name']]}"
     out.sort(key=lambda t: t['name'])
-    final = [dict(id='seed:kind', name='KIND Indianapolis Intl', lat=39.7173, lon=-86.2944, altMeters=241.0, type='AIRPORT',
+    final = [dict(id='seed:kind', name='KIND Indianapolis Intl', lat=39.7173, lon=-86.2944, altMeters=241.0, type='AIRPORT', cats='A',
                   note='Sanity check: from Rushville this bears ~280 true (W), ~45 mi')]
     for t in out:
         d = dict(id=t['id'], name=t['name'], lat=t['lat'], lon=t['lon'])
         if t['alt'] is not None:
             d['altMeters'] = t['alt']
         d['type'] = t['type']
+        d['cats'] = t['cats']
         d['note'] = t['note']
         final.append(d)
     with open(path, 'w', encoding='utf-8') as f:
@@ -438,6 +517,7 @@ def main():
             e['id'] += f"@{e['lat']},{e['lon']}"
         seen.add(e['id'])
         uniq.append(e)
+    print('categories:', dict(collections.Counter(c for e in uniq for c in e['cats']).most_common()))
     write_tiles(uniq, out_dir, build)
     write_seed(uniq, seed)
 

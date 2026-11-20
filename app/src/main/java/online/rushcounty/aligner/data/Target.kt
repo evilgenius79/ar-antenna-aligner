@@ -36,6 +36,8 @@ data class Target(
     val type: TargetType = TargetType.CUSTOM,
     val note: String? = null,
     val visible: Boolean = true,
+    /** [Category] letters from the FCC data; empty for targets entered by hand. */
+    val cats: String = "",
 ) {
     fun toGeoPoint(observerAlt: Double): GeoPoint = GeoPoint(lat, lon, altMeters ?: observerAlt)
 }

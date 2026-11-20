@@ -29,7 +29,8 @@ class TargetRepository(private val context: Context) {
         val stored = runCatching { fromJson(file.readText()) }.getOrElse { emptyList() }
         if (meta.getInt("seedVersion", 1) >= SEED_VERSION) return stored
         // The bundled list grew: swap untouched old defaults for the new list, keep the user's own entries.
-        val merged = mergeSeed(stored, asset("targets_seed_v1.json") + asset("targets_seed_v2.json"), seed)
+        val old = asset("targets_seed_v1.json") + asset("targets_seed_v2.json") + asset("targets_seed_v3.json")
+        val merged = withCats(mergeSeed(stored, old, seed), seed)
         save(merged)
         meta.edit().putInt("seedVersion", SEED_VERSION).apply()
         return merged
@@ -51,7 +52,13 @@ class TargetRepository(private val context: Context) {
 
     companion object {
         /** Bump when assets/targets.json changes so existing installs pick up the new sites. */
-        const val SEED_VERSION = 3
+        const val SEED_VERSION = 4
+
+        /** Fill in categories on entries that have none, from [source] entries with the same id. */
+        fun withCats(targets: List<Target>, source: List<Target>): List<Target> {
+            val cats = source.filter { it.cats.isNotEmpty() }.associate { it.id to it.cats }
+            return targets.map { t -> if (t.cats.isEmpty()) cats[t.id]?.let { t.copy(cats = it) } ?: t else t }
+        }
 
         /**
          * Stored entries that are unmodified copies of an [oldSeed] entry (same name and position)
@@ -79,6 +86,7 @@ class TargetRepository(private val context: Context) {
                     put("lon", t.lon)
                     t.altMeters?.let { put("altMeters", it) }
                     put("type", t.type.name)
+                    if (t.cats.isNotEmpty()) put("cats", t.cats)
                     t.note?.let { put("note", it) }
                     if (!t.visible) put("visible", false)
                 })
@@ -103,6 +111,7 @@ class TargetRepository(private val context: Context) {
                     type = TargetType.parse(o.optString("type")),
                     note = o.optString("note").ifBlank { null },
                     visible = o.optBoolean("visible", true),
+                    cats = o.optString("cats"),
                 )
             }
         }

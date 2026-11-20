@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import online.rushcounty.aligner.ar.CameraIntrinsics
 import online.rushcounty.aligner.ar.Projector
+import online.rushcounty.aligner.data.Category
 import online.rushcounty.aligner.data.Settings
 import online.rushcounty.aligner.data.Target
 import online.rushcounty.aligner.data.TargetType
@@ -108,13 +109,14 @@ fun ArScreen(vm: AppViewModel, cameraGranted: Boolean, locationGranted: Boolean)
     var viewH by remember { mutableStateOf(0f) }
     var sightInMode by remember { mutableStateOf(false) }
     var browse by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var filtering by remember { mutableStateOf(false) }
 
     val observer = fix?.let { GeoPoint(it.lat, it.lon, it.altMeters) }
-    val groundPlaced = remember(fix, targets, settings.maxTowerRangeKm, settings.selectedTargetId) {
+    val groundPlaced = remember(fix, targets, settings.maxTowerRangeKm, settings.hiddenCats, settings.selectedTargetId) {
         val f = fix ?: return@remember emptyList()
         val obs = GeoPoint(f.lat, f.lon, f.altMeters)
         val limitM = settings.maxTowerRangeKm * 1000
-        targets.filter { it.visible }.map { t -> Placed(t, GeoMath.lookAngles(obs, t.toGeoPoint(f.altMeters))) }
+        targets.filter { it.visible && (Category.shown(it, settings.hiddenCats) || it.id == settings.selectedTargetId) }.map { t -> Placed(t, GeoMath.lookAngles(obs, t.toGeoPoint(f.altMeters))) }
             .filter { pl ->
                 val ranged = pl.target.type == TargetType.TOWER || pl.target.type == TargetType.REPEATER
                 !ranged || limitM <= 0 || pl.look.distanceMeters <= limitM || pl.target.id == settings.selectedTargetId
@@ -266,6 +268,7 @@ fun ArScreen(vm: AppViewModel, cameraGranted: Boolean, locationGranted: Boolean)
                     settings = settings,
                     onTarget = onTarget,
                     onTargets = { vm.show(Screen.TARGETS) },
+                    onFilter = { filtering = true },
                     onSightIn = { browse = null; sightInMode = true },
                     onSettings = { vm.show(Screen.SETTINGS) },
                     onNight = { vm.updateSettings { it.copy(nightMode = !it.nightMode) } },
@@ -291,6 +294,15 @@ fun ArScreen(vm: AppViewModel, cameraGranted: Boolean, locationGranted: Boolean)
                 panel(Modifier.align(Alignment.BottomEnd).fillMaxWidth(0.46f))
             }
         }
+    }
+    if (filtering) {
+        CategoryDialog(
+            counts = remember(targets) { Category.counts(targets) },
+            hidden = settings.hiddenCats,
+            onToggle = vm::setCategoryShown,
+            onAll = vm::setCategoriesShown,
+            onDismiss = { filtering = false },
+        )
     }
 }
 
@@ -452,6 +464,7 @@ private fun BottomPanel(
     settings: Settings,
     onTarget: Boolean,
     onTargets: () -> Unit,
+    onFilter: () -> Unit,
     onSightIn: () -> Unit,
     onSettings: () -> Unit,
     onNight: () -> Unit,
@@ -502,8 +515,10 @@ private fun BottomPanel(
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PanelButton("Targets", Modifier.weight(1f), onTargets)
+            // A dot marks that some categories are switched off.
+            PanelButton(if (settings.hiddenCats.isEmpty()) "Filter" else "Filter •", Modifier.weight(0.9f), onFilter)
             PanelButton("Sight in", Modifier.weight(1f), onSightIn)
-            PanelButton(if (settings.nightMode) "Day" else "Night", Modifier.weight(0.8f), onNight)
+            PanelButton(if (settings.nightMode) "Day" else "Night", Modifier.weight(0.75f), onNight)
             PanelButton("Settings", Modifier.weight(1f), onSettings)
         }
     }
@@ -585,7 +600,7 @@ private fun SightInPanel(
 private fun PanelButton(label: String, modifier: Modifier, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick, modifier = modifier,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp, vertical = 6.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-    ) { Text(label, fontSize = 13.sp, maxLines = 1) }
+    ) { Text(label, fontSize = 12.sp, maxLines = 1, softWrap = false) }
 }

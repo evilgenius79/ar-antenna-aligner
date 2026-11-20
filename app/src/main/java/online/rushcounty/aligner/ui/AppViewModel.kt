@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import online.rushcounty.aligner.ar.CameraIntrinsics
 import online.rushcounty.aligner.data.AreaRepository
+import online.rushcounty.aligner.data.Category
 import online.rushcounty.aligner.data.Settings
 import online.rushcounty.aligner.data.SettingsStore
 import online.rushcounty.aligner.data.SiteKind
@@ -114,6 +115,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return list.size to skipped
     }
 
+    fun setCategoryShown(c: Category, shown: Boolean) = updateSettings { s ->
+        s.copy(hiddenCats = s.hiddenCats.filter { it != c.code } + if (shown) "" else c.code.toString())
+    }
+
+    /** Show every category in [cats], or hide them all. */
+    fun setCategoriesShown(cats: List<Category>, shown: Boolean) = updateSettings { s ->
+        val codes = cats.map { it.code }
+        s.copy(hiddenCats = s.hiddenCats.filter { it !in codes } + if (shown) "" else codes.joinToString(""))
+    }
+
     fun exportJson(): String = TargetRepository.toJson(_targets.value)
 
     fun resetTargets() {
@@ -147,7 +158,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val have = _targets.value.map { it.id }.toSet()
                 // Nearest first, so a cap keeps the closest ones.
                 val fresh = found.filterNot { it.id in have }.take(MAX_AREA_SITES)
-                if (fresh.isNotEmpty()) commit(_targets.value + fresh)
+                // Sites added by an older version have no categories yet; pick them up from this download.
+                val current = TargetRepository.withCats(_targets.value, found)
+                if (fresh.isNotEmpty() || current != _targets.value) commit(current + fresh)
                 val where = zip ?: "your location"
                 _areaStatus.value = "Added ${fresh.size} sites within $radiusMiles mi of $where" +
                     if (found.size > fresh.size) " (${found.size - fresh.size} were already in your list)." else "."

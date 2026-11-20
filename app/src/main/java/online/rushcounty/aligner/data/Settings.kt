@@ -19,6 +19,8 @@ data class Settings(
     val showSunMoon: Boolean = true,
     /** Hide towers/repeaters farther than this in the AR view (km); 0 = show all. */
     val maxTowerRangeKm: Double = 0.0,
+    /** [Category] letters whose markers are switched off. */
+    val hiddenCats: String = "",
     val selectedTargetId: String? = null,
 )
 
@@ -37,6 +39,7 @@ class SettingsStore(context: Context) {
         showClarkeBelt = prefs.getBoolean("showClarkeBelt", true),
         showSunMoon = prefs.getBoolean("showSunMoon", true),
         maxTowerRangeKm = prefs.getFloat("maxTowerRangeKm", 0f).toDouble(),
+        hiddenCats = prefs.getString("hiddenCats", "") ?: "",
         selectedTargetId = prefs.getString("selectedTargetId", null),
     )
 
@@ -53,6 +56,7 @@ class SettingsStore(context: Context) {
             .putBoolean("showClarkeBelt", s.showClarkeBelt)
             .putBoolean("showSunMoon", s.showSunMoon)
             .putFloat("maxTowerRangeKm", s.maxTowerRangeKm.toFloat())
+            .putString("hiddenCats", s.hiddenCats)
             .putString("selectedTargetId", s.selectedTargetId)
             .apply()
     }
