@@ -1,0 +1,12 @@
+[
+  {"name":"KIND Indianapolis Intl","lat":39.7173,"lon":-86.2944,"altMeters":241.0,"type":"AIRPORT","note":"Sanity check: from Rushville this bears ~WNW, ~45 mi"},
+  {"name":"Rush County WZX813","lat":39.607278,"lon":-85.443861,"altMeters":326.0,"type":"TOWER","note":"WZX813 loc2, 131 E First St. 155.130/155.370/155.625/155.4225/154.890/155.700/155.310/155.190 MHz. Ground 274 m + ant 52 m. src: FCC ULS bulk"},
+  {"name":"Raleigh Fire KVC540 (Mays)","lat":39.742556,"lon":-85.433028,"altMeters":323.0,"type":"TOWER","note":"KVC540 loc1. 154.265/154.280/154.355 (ant 21 m), 460.575 (ant 30 m). Ground 302 m. src: FCC ULS bulk"},
+  {"name":"Raleigh Fire KVC540 (Carthage)","lat":39.736167,"lon":-85.569417,"altMeters":289.0,"type":"TOWER","note":"KVC540 loc3. 153.830 MHz 10 W. Ground 274 m + ant 15 m. src: FCC ULS bulk"},
+  {"name":"Schools WRXX236 (Rushville)","lat":39.624861,"lon":-85.446889,"altMeters":335.6,"type":"REPEATER","note":"WRXX236 loc1, 270 15th St. DMR 461.450. Ground 296 m + ant 39.6 m. Coords differ from KSB300/KJD846 at same address - verify. src: FCC ULS bulk"},
+  {"name":"Schools WRXX236 (Milroy Elem)","lat":39.499083,"lon":-85.461944,"altMeters":307.1,"type":"REPEATER","note":"WRXX236 loc3. 464.3625 MHz. Ground 295 m + ant 12.1 m. src: FCC ULS bulk"},
+  {"name":"Schools WRXX236 (Arlington Elem)","lat":39.646972,"lon":-85.579000,"altMeters":293.1,"type":"REPEATER","note":"WRXX236 loc5. 461.825 MHz. Ground 281 m + ant 12.1 m. src: FCC ULS bulk"},
+  {"name":"Rushville PD KSB300","lat":39.625889,"lon":-85.455278,"altMeters":350.0,"type":"TOWER","note":"KSB300 loc1, 270 W 15th St. 154.890/155.130/155.370/155.475/155.625/155.700 MHz. Ground 304 m + ant 46 m. Coords disagree with KJD846 (same address) - verify. src: FCC ULS bulk"},
+  {"name":"Rush Co Highway KDJ565","lat":39.608389,"lon":-85.419417,"altMeters":329.0,"type":"TOWER","note":"KDJ565 loc1, SR 44 E county garage. 150.995 MHz. Ground 293 m + ant 36 m. src: FCC ULS bulk"},
+  {"name":"Rushville Fire KJD846","lat":39.625889,"lon":-85.450528,"altMeters":335.0,"type":"TOWER","note":"KJD846 loc1, 270 W 15th St. 154.355/154.415 MHz. Ground 305 m + ant 30 m. Coords disagree with KSB300 (same address) - verify. src: FCC ULS bulk"}
+]

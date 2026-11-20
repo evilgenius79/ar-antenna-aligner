@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lattice tower with a target ring, on a dark tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#FF102030" android:pathData="M8,0h32a8,8 0 0 1 8,8v32a8,8 0 0 1 -8,8h-32a8,8 0 0 1 -8,-8v-32a8,8 0 0 1 8,-8z" />
+    <path android:strokeColor="#FF4DD0E1" android:strokeWidth="2" android:strokeLineCap="round"
+        android:pathData="M24,12 L17,40 M24,12 L31,40 M19.5,30 L28.5,30 M21.3,22 L26.7,22 M19.5,30 L26.7,22 M28.5,30 L21.3,22" />
+    <path android:strokeColor="#FFFFC107" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M24,6 m-5,0 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0" />
+    <path android:fillColor="#FFFFC107" android:pathData="M24,6 m-1.6,0 a1.6,1.6 0 1 0 3.2,0 a1.6,1.6 0 1 0 -3.2,0" />
+</vector>
